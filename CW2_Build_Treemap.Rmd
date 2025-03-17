@@ -116,10 +116,9 @@ treemap_data <- treemap_data %>%
 ```
 
 ```{r}
-# Create a new variable to group diet types into meat eaters and non-meat eaters
+# create a new column to group diet types into meat eaters and non-meat eaters
 treemap_data <- treemap_data %>%
   mutate(
-    # Define the subgroups for meat eaters vs. non-meat eaters
     meat_eaters = case_when(
       diet_group %in% c("Low Meat", "Medium Meat", "High Meat") ~ "Meat Eaters",
       diet_group %in% c("Vegan", "Vegetarian", "Fish") ~ "Non Meat Eaters",
@@ -202,20 +201,20 @@ treemap_data <- treemap_data %>%
 
 ```{r treemap, fig.width=12, fig.height=10, dpi=300}
 ggplot(treemap_data,
-       aes(area = total_impact_compressed,  # Use scaled and compressed values for size
-           fill = total_impact,             # Use total_impact for color (difference from mean)
+       aes(area = total_impact_compressed,  
+           fill = total_impact,  
            label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle
            subgroup2 = diet_group,
            subgroup = meat_eaters)) +
   geom_treemap() +
   
-  # Borders around each diet group
+  # borders around meat eaters vs non meat eaters
   geom_treemap_subgroup_border(size = 9, colour = "black") +
   
-  # Borders around each diet group
+  # borders around each diet group
   geom_treemap_subgroup2_border(size = 3, colour = "black") +
   
-  # Text styling for individual rectangle/cell
+  # text styling for individual rectangle/cell
   geom_treemap_text(
     colour = "black",
     min.size = 0.5,
@@ -234,7 +233,7 @@ ggplot(treemap_data,
     size = 20
   ) +
   
-  # Color scale: total_impact directly represents the Z-scores (difference from mean)
+  # color scale, green is lowest impact, red is highest impact, intermediate values are a gradient
   scale_fill_gradient2(
     low = "darkgreen",
     mid = "white",
@@ -253,7 +252,6 @@ ggplot(treemap_data,
   theme(legend.position = "bottom",
         legend.title = element_text(margin = margin(r = 10)))
 
-# Save the figure as PNG
 ggsave("treemap2.png", width = 11, height = 6, dpi = 300)
 
 ```
