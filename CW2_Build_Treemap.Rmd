@@ -30,7 +30,8 @@ data <- read_csv("Results_21Mar2022.csv",
 ```
 
 ```{r aggreg_data}
-# aggregate the measures in each monte carlo run and take the mean
+# aggregate the measures in each monte carlo run by taking the mean
+# means are taken first before standardising, want to take average of all monte carlo runs, don't care about variability between monte carlo runs
 aggregated_data <- data %>%
   group_by(diet_group, age_group, sex) %>%
   summarise(
@@ -64,7 +65,8 @@ total_impact <- standardised_data %>%
 ```{r treemap_data}
 # select columns used for the treemap
 treemap_data <- total_impact %>%
-  select(diet_group, age_group, sex, total_impact)
+  select(diet_group, age_group, sex, total_impact) %>%
+  mutate(total_impact = total_impact)
 ```
 
 ```{r rename_vals}
@@ -88,39 +90,132 @@ treemap_data <- treemap_data %>%
   ))
 ```
 
-```{r treemap, fig.width=12, fig.height=6, dpi=300}
-# creates the treemap
+```{r calc_diff_within_groups}
+# calculates the differences WITHIN groups
+# reflected in the size of the rectangles
+treemap_data <- treemap_data %>%
+  group_by(diet_group) %>%
+  mutate(
+    # check if the diet group has negative values
+    total_impact_is_negative = min(total_impact) < 0,
+    
+    # for negative values (better impact), normalise so that the most negative value gets the largest area
+    total_impact_normalized = ifelse(
+      total_impact_is_negative,
+      (max(total_impact) - total_impact) / (max(total_impact) - min(total_impact)), 
+      (total_impact - min(total_impact)) / (max(total_impact) - min(total_impact))    # for positive values, just do standard normalisation
+    ),
+    
+    # need to add 0.01 to prevent rectangles with 0 area
+    total_impact_scaled = total_impact_normalized + 0.01,
+    
+    # apply a final scaling to prevent rectangles from getting too small
+    total_impact_compressed = total_impact_scaled ^ 0.3
+  ) %>%
+  ungroup()
+```
+
+```{r}
+# Create a new variable to group diet types into meat eaters and non-meat eaters
+treemap_data <- treemap_data %>%
+  mutate(
+    # Define the subgroups for meat eaters vs. non-meat eaters
+    meat_eaters = case_when(
+      diet_group %in% c("Low Meat", "Medium Meat", "High Meat") ~ "Meat Eaters",
+      diet_group %in% c("Vegan", "Vegetarian", "Fish") ~ "Non Meat Eaters",
+      TRUE ~ "Other"
+    )
+  )
+```
+
+
+<!-- ```{r treemap, fig.width=12, fig.height=6.3, dpi=300} -->
+<!-- # creates the treemap -->
+<!-- ggplot(treemap_data, -->
+<!--        # impact percentage used for both the rectangle area and color (fill) -->
+<!--        # hierarchy of groups: diet group -> age group -> sex -->
+<!--        aes(area = abs(total_impact_compressed), -->
+<!--            fill = total_impact, -->
+<!--            label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle -->
+<!--            subgroup = diet_group,  -->
+<!--            subgroup2 = age_group,  -->
+<!--            subgroup3 = sex)) + -->
+<!--   geom_treemap() + -->
+
+<!--   # borders between sexes in age groups -->
+<!--   geom_treemap_subgroup3_border(size = 0.4, colour = "black") + -->
+
+<!--   # borders around each age group within diet groups -->
+<!--   geom_treemap_subgroup2_border(size = 3, colour = "#272727") + -->
+
+<!--   # borders around each diet group -->
+<!--   geom_treemap_subgroup_border(size = 6, colour = "black") + -->
+
+<!--   # text styling for each diet group -->
+<!--   geom_treemap_subgroup_text( -->
+<!--     place = "center",  -->
+<!--     grow = FALSE,  -->
+<!--     alpha = 0.9,  -->
+<!--     colour = "#0096FF",  -->
+<!--     fontface = "bold.italic",  -->
+<!--     size = 20 -->
+<!--   ) + -->
+
+<!--   # text styling for individual rectangle/cell -->
+<!--   geom_treemap_text( -->
+<!--     colour = "black", -->
+<!--     min.size = 0.5, -->
+<!--     place = "center", -->
+<!--     grow = FALSE, -->
+<!--     reflow = TRUE -->
+<!--   ) + -->
+
+<!--   # color scale, green is lowest impact, red is highest impact, intermediate values are a gradient -->
+<!--   scale_fill_gradient2( -->
+<!--     low = "darkgreen", -->
+<!--     mid = "white", -->
+<!--     high = "#bb0000", -->
+<!--     name = "Difference From Mean Environmental Impact", -->
+<!--     # guide changes the scale bar -->
+<!--     guide = guide_colorbar( -->
+<!--       barwidth = 20, -->
+<!--       barheight = 0.8 -->
+<!--     ), -->
+<!--     # for the different ticks on the bar -->
+<!--     breaks = c(-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15, 18, 21),   -->
+<!--     labels = c("-15", "-12", "-9", "-6", "-3", "0", "3", "6", "9", "12", "15", "18", "21") -->
+<!--   ) + -->
+
+<!--   ggtitle("Environmental Impact Difference From The Average Using Z-Scores") + -->
+<!--   theme_minimal() + -->
+<!--   theme(legend.position = "bottom", -->
+<!--         legend.title = element_text(margin = margin(r = 10))) -->
+
+<!-- # save figure as png -->
+<!-- ggsave("treemap.png", width = 11, height = 6, dpi = 300) -->
+
+<!-- ``` -->
+
+
+
+
+
+```{r treemap, fig.width=12, fig.height=10, dpi=300}
 ggplot(treemap_data,
-       # impact percentage used for both the rectangle area and color (fill)
-       # hierarchy of groups: diet group -> age group -> sex
-       aes(area = abs(total_impact),
-           fill = total_impact,
+       aes(area = total_impact_compressed,  # Use scaled and compressed values for size
+           fill = total_impact,             # Use total_impact for color (difference from mean)
            label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle
-           subgroup = diet_group, 
-           subgroup2 = age_group, 
-           subgroup3 = sex)) +     
+           subgroup2 = diet_group,
+           subgroup = meat_eaters)) +
   geom_treemap() +
   
-  # borders between sexes in age groups
-  geom_treemap_subgroup3_border(size = 0.4, colour = "black") +
+  # Borders around each diet group
+  geom_treemap_subgroup_border(size = 9, colour = "black") +
   
-  # borders around each age group within diet groups
-  geom_treemap_subgroup2_border(size = 3, colour = "#272727") +
+  # Borders around each diet group
+  geom_treemap_subgroup2_border(size = 3, colour = "black") +
   
-  # borders around each diet group
-  geom_treemap_subgroup_border(size = 6, colour = "black") +
-  
-  # text styling for each diet group
-  geom_treemap_subgroup_text(
-    place = "center", 
-    grow = FALSE, 
-    alpha = 0.9, 
-    colour = "#0096FF", 
-    fontface = "bold.italic", 
-    size = 20
-  ) +
-  
-  # text styling for individual rectangle/cell
+  # Text styling for individual rectangle/cell
   geom_treemap_text(
     colour = "black",
     min.size = 0.5,
@@ -129,25 +224,36 @@ ggplot(treemap_data,
     reflow = TRUE
   ) +
   
-  # color scale, green is lowest impact, red is highest impact, intermediate values are a gradient
+  # text styling for each diet group
+  geom_treemap_subgroup2_text(
+    place = "center", 
+    grow = FALSE, 
+    alpha = 0.9, 
+    colour = "#0096FF", 
+    fontface = "bold.italic", 
+    size = 20
+  ) +
+  
+  # Color scale: total_impact directly represents the Z-scores (difference from mean)
   scale_fill_gradient2(
     low = "darkgreen",
     mid = "white",
     high = "#bb0000",
     name = "Difference From Mean Environmental Impact",
-    # guide changes the scale bar
     guide = guide_colorbar(
       barwidth = 20,
       barheight = 0.8
-    )
+    ),
+    breaks = c(-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15),  
+    labels = c("-15", "-12", "-9", "-6", "-3", "0", "3", "6", "9", "12", "15")
   ) +
   
-  ggtitle("Environmental Impact Difference From The Average Using Z-Scores") +
+  ggtitle("Environmental Impact by Diet Group") +
   theme_minimal() +
   theme(legend.position = "bottom",
         legend.title = element_text(margin = margin(r = 10)))
 
-# save figure as png
-ggsave("treemap.png", width = 11, height = 6, dpi = 300)
+# Save the figure as PNG
+ggsave("treemap2.png", width = 11, height = 6, dpi = 300)
 
 ```
