@@ -27,71 +27,47 @@ data <- read_csv("Results_21Mar2022.csv",
   col_types = cols(sex = col_factor(levels = c("female", "male")), 
                   diet_group = col_factor(levels = c("meat100", "meat50", "meat", "vegan", "veggie", "fish")), 
                   age_group = col_factor(levels = c("20-29", "30-39", "40-49", "50-59", "60-69", "70-79"))))
-
-# View(data)
 ```
 
-```{r calc_weighted_means}
-# aggregate the measures in each monte carlo run and take the weighted mean
-# i.e.   (measure * number of participants in grouping) / (number of participants in grouping)
-# this has to be done since there are large differences between groupings
+```{r aggreg_data}
+# aggregate the measures in each monte carlo run and take the mean
 aggregated_data <- data %>%
   group_by(diet_group, age_group, sex) %>%
   summarise(
-    mean_ghgs = sum(mean_ghgs * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_land = sum(mean_land * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_watscar = sum(mean_watscar * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_eut = sum(mean_eut * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_ghgs_ch4 = sum(mean_ghgs_ch4 * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_ghgs_n2o = sum(mean_ghgs_n2o * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_bio = sum(mean_bio * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_watuse = sum(mean_watuse * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    mean_acid = sum(mean_acid * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    n_participants = first(n_participants), # each number of participants is constant across runs for each grouping
-    .groups = "drop"
-  )
+    across(c(mean_ghgs, mean_land, mean_watscar, mean_eut, mean_ghgs_ch4, 
+             mean_ghgs_n2o, mean_bio, mean_watuse, mean_acid), 
+           mean, na.rm = TRUE),
+    n_participants = first(n_participants)
+  ) %>%
+  ungroup()
 ```
 
 ```{r standardising}
 # calculate Z scores for each measure
-standardized_data <- aggregated_data %>%
+standardised_data <- aggregated_data %>%
   mutate(across(
     starts_with("mean_"), 
     ~ (.-mean(.)) / sd(.), 
     .names = "z_{.col}"
   ))
-
 ```
 
 
 ```{r total_impact}
 # calculate total impact score
-impact_data <- standardized_data %>%
+total_impact <- standardised_data %>%
   rowwise() %>%
   mutate(total_impact = sum(c_across(starts_with("z_")), na.rm = TRUE)) %>%
   ungroup()
 ```
 
-```{r}
-# prepare the data for the treemap with the correct groupings
-treemap_data <- impact_data %>%
-  group_by(diet_group, age_group, sex) %>%
-  summarise(
-    total_impact = sum(total_impact * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
-    n_participants = sum(n_participants, na.rm = TRUE),
-    .groups = "drop"
-  )
+```{r treemap_data}
+# select columns used for the treemap
+treemap_data <- total_impact %>%
+  select(diet_group, age_group, sex, total_impact)
 ```
 
-```{r}
-# # calculate the total impact percentage for each subgroup
-# total_sum_impact <- (-(min(treemap_data$total_impact)) + max(treemap_data$total_impact) + 1)
-# 
-# treemap_data <- treemap_data %>%
-#   mutate(total_impact_percentage = ((total_impact - (min(treemap_data$total_impact))) / total_sum_impact * 100))
-```
-
-```{r rename_avals}
+```{r rename_vals}
 # rename the diet groups
 treemap_data <- treemap_data %>%
   mutate(diet_group = case_when(
