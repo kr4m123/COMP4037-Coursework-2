@@ -1,0 +1,152 @@
+---
+title: "CW2"
+author: "Mark Freeth"
+date: "2025-03-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, errors=FALSE}
+# required packages (uncomment if they are needed to be installed):
+# install.packages(c("dplyr", "tidyr", "ggplot2", "treemapify", "readr"))
+
+# load required libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(treemapify)
+library(readr)
+```
+
+```{r load_data}
+# load data file, change categorical columns to factors
+data <- read_csv("Results_21Mar2022.csv", 
+  col_types = cols(sex = col_factor(levels = c("female", "male")), 
+                  diet_group = col_factor(levels = c("meat100", "meat50", "meat", "vegan", "veggie", "fish")), 
+                  age_group = col_factor(levels = c("20-29", "30-39", "40-49", "50-59", "60-69", "70-79"))))
+
+# View(data)
+```
+
+```{r standardising}
+# calculate Z scores for each measure
+standardized_data <- data %>%
+  mutate(across(c(mean_ghgs, mean_land, mean_watscar, mean_eut, mean_ghgs_ch4, 
+                  mean_ghgs_n2o, mean_bio, mean_watuse, mean_acid), 
+                ~ (.-mean(.)) / sd(.), 
+                .names = "z_{.col}"))
+
+```
+
+
+```{r total_impact}
+# calculate total impact score
+impact_data <- standardized_data %>%
+  rowwise() %>%
+  mutate(total_impact = sum(c_across(starts_with("z_")), na.rm = TRUE)) %>%
+  ungroup()
+```
+
+```{r}
+# aggregate data for treemap
+treemap_data <- impact_data %>%
+  group_by(diet_group, age_group, sex) %>%
+  summarise(total_impact = sum(total_impact, na.rm = TRUE),
+            n_participants = sum(n_participants, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+```{r}
+# # calculate the total impact percentage for each subgroup
+# total_sum_impact <- (-(min(treemap_data$total_impact)) + max(treemap_data$total_impact) + 1)
+# 
+# treemap_data <- treemap_data %>%
+#   mutate(total_impact_percentage = ((total_impact - (min(treemap_data$total_impact))) / total_sum_impact * 100))
+```
+
+```{r rename vals}
+# rename the diet groups
+treemap_data <- treemap_data %>%
+  mutate(diet_group = case_when(
+    diet_group == "meat100" ~ "High Meat",
+    diet_group == "meat50" ~ "Medium Meat",
+    diet_group == "meat" ~ "Low Meat",
+    diet_group == "vegan" ~ "Vegan",
+    diet_group == "veggie" ~ "Vegetarian",
+    diet_group == "fish" ~ "Fish",
+    TRUE ~ diet_group
+  ))
+
+# rename the sexes (makes plot look less cluttered)
+treemap_data <- treemap_data %>%
+  mutate(sex = case_when(
+    sex == "female" ~ "Female",
+    sex == "male" ~ "Male"
+  ))
+```
+
+```{r treemap, fig.width=12, fig.height=6, dpi=300}
+# creates the treemap
+ggplot(treemap_data,
+       # impact percentage used for both the rectangle area and color (fill)
+       # hierarchy of groups: diet group -> age group -> sex
+       aes(area = abs(total_impact),
+           fill = total_impact,
+           label = paste0(sex, "\n(", age_group, ")"),  # the actual label displayed on each rectangle
+           subgroup = diet_group, 
+           subgroup2 = age_group, 
+           subgroup3 = sex)) +     
+  geom_treemap() +
+  
+  # borders between sexes in age groups
+  geom_treemap_subgroup3_border(size = 0.4, colour = "black") +
+  
+  # borders around each age group within diet groups
+  geom_treemap_subgroup2_border(size = 3, colour = "#272727") +
+  
+  # borders around each diet group
+  geom_treemap_subgroup_border(size = 6, colour = "black") +
+  
+  # text styling for each diet group
+  geom_treemap_subgroup_text(
+    place = "center", 
+    grow = FALSE, 
+    alpha = 0.9, 
+    colour = "#0096FF", 
+    fontface = "bold.italic", 
+    size = 20
+  ) +
+  
+  # text styling for individual rectangle/cell
+  geom_treemap_text(
+    colour = "black",
+    min.size = 0.5,
+    place = "center",
+    grow = FALSE,
+    reflow = TRUE
+  ) +
+  
+  # color scale, green is lowest impact, red is highest impact, intermediate values are a gradient
+  scale_fill_gradient2(
+    low = "darkgreen",
+    mid = "white",
+    high = "#bb0000",
+    name = "Difference From Mean Environmental Impact",
+    # guide changes the scale bar
+    guide = guide_colorbar(
+      barwidth = 20,
+      barheight = 0.8
+    )
+  ) +
+  
+  ggtitle("Environmental Impact Difference From The Average") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# save figure as png
+ggsave("treemap.png", width = 11, height = 6, dpi = 300)
+
+```

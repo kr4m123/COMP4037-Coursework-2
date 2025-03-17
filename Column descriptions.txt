@@ -1,0 +1,17 @@
+MC Run ID = monte carlo run ID, runs from 1-1000
+Grouping = cross join of age group, sex, and diet
+
+Mean Ghgs = mean greenhouse gasses
+Mean Land = mean land use
+Mean Watscar = mean water scarcity
+Mean Eut = mean eutrophication
+Mean Ghgs Ch4 = mean methane
+Mean Ghgs N2O = nitrous oxide
+Mean Bio = mean biodiversity impact
+Mean Watuse = mean water use
+Mean Acid = mean acidifcation
+
+N Participants = number of participants in this grouping
+Sex
+Diet Group
+Age group
