@@ -31,13 +31,35 @@ data <- read_csv("Results_21Mar2022.csv",
 # View(data)
 ```
 
+```{r calc_weighted_means}
+# aggregate the measures in each monte carlo run and take the weighted mean
+# i.e.   (measure * number of participants in grouping) / (number of participants in grouping)
+# this has to be done since there are large differences between groupings
+aggregated_data <- data %>%
+  group_by(diet_group, age_group, sex) %>%
+  summarise(
+    mean_ghgs = sum(mean_ghgs * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_land = sum(mean_land * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_watscar = sum(mean_watscar * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_eut = sum(mean_eut * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_ghgs_ch4 = sum(mean_ghgs_ch4 * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_ghgs_n2o = sum(mean_ghgs_n2o * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_bio = sum(mean_bio * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_watuse = sum(mean_watuse * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    mean_acid = sum(mean_acid * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    n_participants = first(n_participants), # each number of participants is constant across runs for each grouping
+    .groups = "drop"
+  )
+```
+
 ```{r standardising}
 # calculate Z scores for each measure
-standardized_data <- data %>%
-  mutate(across(c(mean_ghgs, mean_land, mean_watscar, mean_eut, mean_ghgs_ch4, 
-                  mean_ghgs_n2o, mean_bio, mean_watuse, mean_acid), 
-                ~ (.-mean(.)) / sd(.), 
-                .names = "z_{.col}"))
+standardized_data <- aggregated_data %>%
+  mutate(across(
+    starts_with("mean_"), 
+    ~ (.-mean(.)) / sd(.), 
+    .names = "z_{.col}"
+  ))
 
 ```
 
@@ -51,12 +73,14 @@ impact_data <- standardized_data %>%
 ```
 
 ```{r}
-# aggregate data for treemap
+# prepare the data for the treemap with the correct groupings
 treemap_data <- impact_data %>%
   group_by(diet_group, age_group, sex) %>%
-  summarise(total_impact = sum(total_impact, na.rm = TRUE),
-            n_participants = sum(n_participants, na.rm = TRUE)) %>%
-  ungroup()
+  summarise(
+    total_impact = sum(total_impact * n_participants, na.rm = TRUE) / sum(n_participants, na.rm = TRUE),
+    n_participants = sum(n_participants, na.rm = TRUE),
+    .groups = "drop"
+  )
 ```
 
 ```{r}
@@ -72,8 +96,8 @@ treemap_data <- impact_data %>%
 treemap_data <- treemap_data %>%
   mutate(diet_group = case_when(
     diet_group == "meat100" ~ "High Meat",
-    diet_group == "meat50" ~ "Medium Meat",
-    diet_group == "meat" ~ "Low Meat",
+    diet_group == "meat" ~ "Medium Meat",
+    diet_group == "meat50" ~ "Low Meat",
     diet_group == "vegan" ~ "Vegan",
     diet_group == "veggie" ~ "Vegetarian",
     diet_group == "fish" ~ "Fish",
@@ -95,7 +119,7 @@ ggplot(treemap_data,
        # hierarchy of groups: diet group -> age group -> sex
        aes(area = abs(total_impact),
            fill = total_impact,
-           label = paste0(sex, "\n(", age_group, ")\n", total_impact),  # the actual label displayed on each rectangle
+           label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle
            subgroup = diet_group, 
            subgroup2 = age_group, 
            subgroup3 = sex)) +     
@@ -142,9 +166,10 @@ ggplot(treemap_data,
     )
   ) +
   
-  ggtitle("Environmental Impact Difference From The Average") +
+  ggtitle("Environmental Impact Difference From The Average Using Z-Scores") +
   theme_minimal() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        legend.title = element_text(margin = margin(r = 10)))
 
 # save figure as png
 ggsave("treemap.png", width = 11, height = 6, dpi = 300)
