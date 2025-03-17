@@ -67,7 +67,7 @@ treemap_data <- impact_data %>%
 #   mutate(total_impact_percentage = ((total_impact - (min(treemap_data$total_impact))) / total_sum_impact * 100))
 ```
 
-```{r rename vals}
+```{r rename_avals}
 # rename the diet groups
 treemap_data <- treemap_data %>%
   mutate(diet_group = case_when(
@@ -95,7 +95,7 @@ ggplot(treemap_data,
        # hierarchy of groups: diet group -> age group -> sex
        aes(area = abs(total_impact),
            fill = total_impact,
-           label = paste0(sex, "\n(", age_group, ")"),  # the actual label displayed on each rectangle
+           label = paste0(sex, "\n(", age_group, ")\n", total_impact),  # the actual label displayed on each rectangle
            subgroup = diet_group, 
            subgroup2 = age_group, 
            subgroup3 = sex)) +     
