@@ -99,18 +99,20 @@ treemap_data <- treemap_data %>%
     # check if the diet group has negative values
     total_impact_is_negative = min(total_impact) < 0,
     
-    # for negative values (better impact), normalise so that the most negative value gets the largest area
-    total_impact_normalized = ifelse(
-      total_impact_is_negative,
-      (max(total_impact) - total_impact) / (max(total_impact) - min(total_impact)), 
-      (total_impact - min(total_impact)) / (max(total_impact) - min(total_impact))    # for positive values, just do standard normalisation
-    ),
+    # # for negative values (better impact), normalise so that the most negative value gets the largest area
+    # total_impact_normalise = ifelse(
+    #   total_impact_is_negative,
+    #   (max(total_impact) - total_impact) / (max(total_impact) - min(total_impact)), 
+    #   (total_impact - min(total_impact)) / (max(total_impact) - min(total_impact))    # for positive values, just do standard normalisation
+    # ),
+    
+    total_impact_normalise = (total_impact - min(total_impact)) / (max(total_impact) - min(total_impact)),
     
     # need to add 0.01 to prevent rectangles with 0 area
-    total_impact_scaled = total_impact_normalized + 0.01,
+    total_impact_scaled = total_impact_normalise + 0.01,
     
     # apply a final scaling to prevent rectangles from getting too small
-    total_impact_compressed = total_impact_scaled ^ 0.3
+    total_impact_compressed = total_impact_scaled ^ 0.2
   ) %>%
   ungroup()
 ```
@@ -204,15 +206,19 @@ ggplot(treemap_data,
        aes(area = total_impact_compressed,  
            fill = total_impact,  
            label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle
-           subgroup2 = diet_group,
-           subgroup = meat_eaters)) +
+           subgroup = diet_group,
+           subgroup2 = age_group,
+           subgroup3 = sex)) +
   geom_treemap() +
   
-  # borders around meat eaters vs non meat eaters
-  geom_treemap_subgroup_border(size = 9, colour = "black") +
+  # borders around each sex group
+  geom_treemap_subgroup3_border(size = 1, colour = "black") +
   
   # borders around each diet group
   geom_treemap_subgroup2_border(size = 3, colour = "black") +
+  
+  # borders around each age group
+  geom_treemap_subgroup_border(size = 9, colour = "black") +
   
   # text styling for individual rectangle/cell
   geom_treemap_text(
@@ -224,7 +230,7 @@ ggplot(treemap_data,
   ) +
   
   # text styling for each diet group
-  geom_treemap_subgroup2_text(
+  geom_treemap_subgroup_text(
     place = "center", 
     grow = FALSE, 
     alpha = 0.9, 
