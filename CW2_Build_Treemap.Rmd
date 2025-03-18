@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 ```
 
 ```{r packages, errors=FALSE}
@@ -106,7 +106,8 @@ treemap_data <- treemap_data %>%
   ungroup()
 ```
 
-```{r treemap, fig.width=12, fig.height=10, dpi=300}
+```{r treemap, fig.width=12, fig.height=8, dpi=300}
+# constructing the treemap
 ggplot(treemap_data,
        aes(area = total_impact_compressed,  
            fill = total_impact,  
