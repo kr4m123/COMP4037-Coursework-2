@@ -15,3 +15,5 @@ The original study's paper can be found here: https://www.nature.com/articles/s4
 - Column descriptions.txt - Descriptions of each column listed in the dataset's CSV file, please read the original paper for a full description of the columns
 
 - treemap.png - Resulting treemap saved as a png file
+
+- treemap_rearranged.png - The same treemap as treemap.png but with diet groups reorganised. Sorting is not possible with treemapify
