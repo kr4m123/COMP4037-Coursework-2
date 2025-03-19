@@ -90,26 +90,11 @@ treemap_data <- treemap_data %>%
   ))
 ```
 
-```{r calc_diff_within_groups}
-# calculates the differences WITHIN groups
-# reflected in the size of the rectangles
-treemap_data <- treemap_data %>%
-  group_by(diet_group) %>%
-  mutate(total_impact_normalise = (total_impact - min(total_impact)) / (max(total_impact) - min(total_impact)),
-    
-    # need to add 0.01 to prevent rectangles with 0 area
-    total_impact_scaled = total_impact_normalise + 0.01,
-    
-    # apply a final scaling to prevent rectangles from getting too small
-    total_impact_compressed = total_impact_scaled ^ 0.2
-  ) %>%
-  ungroup()
-```
 
 ```{r treemap, fig.width=12, fig.height=8, dpi=300}
 # constructing the treemap
 ggplot(treemap_data,
-       aes(area = total_impact_compressed,  
+       aes(area = abs(total_impact),  
            fill = total_impact,  
            label = paste0(sex, "\n(", age_group, ")\n", round(total_impact, 2)),  # the actual label displayed on each rectangle
            subgroup = diet_group,
@@ -154,8 +139,8 @@ ggplot(treemap_data,
       barwidth = 20,
       barheight = 0.8
     ),
-    breaks = c(-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15),  
-    labels = c("-15", "-12", "-9", "-6", "-3", "0", "3", "6", "9", "12", "15")
+    breaks = c(-15, -12, -9, -6, -3, 0, 3, 6, 9, 12, 15, 18),  
+    labels = c("-15", "-12", "-9", "-6", "-3", "0", "3", "6", "9", "12", "15", "18")
   ) +
   
   ggtitle("Environmental Impact by Diet Group") +
