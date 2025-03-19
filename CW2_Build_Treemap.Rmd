@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r packages, errors=FALSE}
@@ -19,6 +19,9 @@ library(tidyr)
 library(ggplot2)
 library(treemapify)
 library(readr)
+library(tidyverse)
+library(plotly)
+library(webshot)
 ```
 
 ```{r load_data}
@@ -115,7 +118,7 @@ ggplot(treemap_data,
     colour = "black",
     min.size = 0.5,
     place = "center",
-    grow = FALSE,
+    grow = TRUE,
     reflow = TRUE
   ) +
   
