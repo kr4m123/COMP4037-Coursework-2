@@ -1,5 +1,5 @@
 <h3>Description</h3>
-Source code for the second coursework for the research methods course (COMP4037). This code prepares and constructs a treemap of data from a study on environmental impact of people with different diets. 
+Source code for the second coursework for the research methods course (COMP4037). This code prepares and constructs a pair of treemaps of data from a study on environmental impact of people with different diets. 
 
 <h3>Data Source and Original Paper</h3>
 The data used is not included in this repository but can be found here: https://ora.ox.ac.uk/objects/uuid:ca441840-db5a-48c8-9b82-1ec1d77c2e9c <sub>(file "Results_21Mar2022.csv")</sub><br><br>
@@ -8,10 +8,12 @@ The original study's paper can be found here: https://www.nature.com/articles/s4
 
 <h3>Repository contents:</h3>
 
-- CW2_Build_Treemap.Rmd - R markdown file to prepare the data and construct the treemap
-
-- CW2_Build_Treemap.html - HTML render of the R document
-
 - Column descriptions.txt - Descriptions of each column listed in the dataset's CSV file, please read the original paper for a full description of the columns
 
-- treemap.png - Resulting treemap saved as a png file
+- treemap_full.ipynb - Python file that prepares the data and constructs the treemaps
+
+- treemap_full.html - *dynamic* HTML render of the resulting treemaps
+
+- treemap_static.png - *static* treemap saved as a png file (only shows total impact)
+
+- Supporting Code (folder) - Old code that constructs treemaps separately, kept for completeness
