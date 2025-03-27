@@ -10,7 +10,7 @@ The original study's paper can be found here: https://www.nature.com/articles/s4
 
 - Column descriptions.txt - Descriptions of each column listed in the dataset's CSV file, please read the original paper for a full description of the columns
 
-- treemap_full.ipynb - Python file that prepares the data and constructs the treemaps
+- treemap_full.ipynb - Jupyter notebook that prepares the data and constructs the treemaps
 
 - treemap_full.html - *dynamic* HTML render of the resulting treemaps
 
